@@ -1,0 +1,43 @@
+[profile.default]
+# Project paths
+src = "src"
+out = "out"
+extra_output = ["storageLayout"]
+libs = ["lib"]
+
+# Solidity compiler
+solc_version = "0.8.26"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+bytecode_hash = "none"
+
+# Remappings
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
+]
+
+
+# Script + build configuration
+broadcast = "broadcast"
+wallet_derivation_path = "m/44'/60'/0'/0/"
+
+# Testing configuration
+verbosity = 2
+fuzz_runs = 1000
+
+# RPC URLs for different networks
+[rpc_endpoints]
+ethereum = "${ETH_RPC_URL}"
+polygon = "https://polygon-rpc.com"
+polygon_mumbai = "https://rpc-mumbai.matic.today"
+base = "https://mainnet.base.org"
+base_goerli = "https://goerli.base.org"
+sepolia = "https://rpc.sepolia.org"
+
+# Etherscan API keys for contract verification
+[etherscan]
+ethereum = { key = "${ETHERSCAN_API_KEY}" }
+polygon = { key = "${POLYGONSCAN_API_KEY}" }
+base = { key = "${BASESCAN_API_KEY}" }
