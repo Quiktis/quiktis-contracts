@@ -4,7 +4,6 @@ pragma solidity ^0.8.26;
 import "forge-std/Script.sol";
 import {TicketNFT} from "../src/TicketNFT.sol";
 import {WalletFactory} from "../src/WalletFactory.sol";
-import {UserWallet} from "../src/UserWallet.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 

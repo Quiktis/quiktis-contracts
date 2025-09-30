@@ -33,7 +33,7 @@ ethereum = "${ETH_RPC_URL}"
 polygon = "https://polygon-rpc.com"
 polygon_mumbai = "https://rpc-mumbai.matic.today"
 base = "https://mainnet.base.org"
-base_goerli = "https://goerli.base.org"
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
 sepolia = "https://rpc.sepolia.org"
 
 # Etherscan API keys for contract verification
