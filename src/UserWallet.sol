@@ -5,11 +5,14 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+interface IERC20 {
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+}
+
 /**
  * @title UserWallet (Upgradeable)
  * @dev Upgradeable smart wallet contract for individual users
- * @notice This contract acts as a smart wallet for users, allowing them to interact
- * with the Quiktis ecosystem through a dedicated wallet address
+ * @notice Acts as a smart wallet for Quiktis users, supporting crypto (ETH), CNGN & USDC.
  */
 contract UserWallet is Initializable, ReentrancyGuardUpgradeable, OwnableUpgradeable {
     // The user who owns this wallet
@@ -17,15 +20,18 @@ contract UserWallet is Initializable, ReentrancyGuardUpgradeable, OwnableUpgrade
     
     // The factory contract that created this wallet
     address public factory;
-    
+
+    // Supported tokens (Base testnet)
+    address public constant CNGN = 0x7E29CF1D8b1F4c847D0f821b79dDF6E67A5c11F8;
+    address public constant USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+
     // Events
     event TransactionExecuted(address indexed target, uint256 value, bytes data, bool success);
+    event TokenPayment(address indexed payer, address indexed token, address indexed recipient, uint256 amount);
     event EtherReceived(address indexed from, uint256 amount);
 
     /**
      * @dev Initializer function (replaces constructor)
-     * @param _user The address of the user who owns this wallet
-     * @param _factory The address of the factory contract
      */
     function initialize(address _user, address _factory) public initializer {
         __ReentrancyGuard_init();
@@ -38,19 +44,31 @@ contract UserWallet is Initializable, ReentrancyGuardUpgradeable, OwnableUpgrade
         factory = _factory;
     }
 
-    /**
-     * @dev Modifier to restrict functions to user or factory only
-     */
     modifier onlyUserOrFactory() {
-        require(
-            msg.sender == user || msg.sender == factory,
-            "UserWallet: Not authorized"
-        );
+        require(msg.sender == user || msg.sender == factory, "UserWallet: Not authorized");
         _;
     }
 
     /**
-     * @dev Execute a transaction from this wallet
+     * @dev Pay using an approved ERC20 token (CNGN or USDC)
+     */
+    function payWithToken(address token, address recipient, uint256 amount)
+        external
+        onlyUserOrFactory
+        nonReentrant
+    {
+        require(token == CNGN || token == USDC, "UserWallet: Unsupported token");
+        require(recipient != address(0), "UserWallet: Invalid recipient");
+        require(amount > 0, "UserWallet: Amount must be > 0");
+
+        bool success = IERC20(token).transferFrom(msg.sender, recipient, amount);
+        require(success, "UserWallet: Token transfer failed");
+
+        emit TokenPayment(msg.sender, token, recipient, amount);
+    }
+
+    /**
+     * @dev Execute a transaction from this wallet (e.g. for internal logic)
      */
     function execute(
         address target,
@@ -65,43 +83,10 @@ contract UserWallet is Initializable, ReentrancyGuardUpgradeable, OwnableUpgrade
         return (success, returnData);
     }
 
-    /**
-     * @dev Execute multiple transactions in a batch
-     */
-    function executeBatch(
-        address[] calldata targets,
-        uint256[] calldata values,
-        bytes[] calldata datas
-    ) external onlyUserOrFactory nonReentrant returns (bool[] memory successes, bytes[] memory returnDatas) {
-        require(
-            targets.length == values.length && values.length == datas.length,
-            "UserWallet: Arrays length mismatch"
-        );
-        require(targets.length > 0, "UserWallet: Empty transaction array");
-        
-        successes = new bool[](targets.length);
-        returnDatas = new bytes[](targets.length);
-        
-        for (uint256 i = 0; i < targets.length; i++) {
-            require(targets[i] != address(0), "UserWallet: Cannot call zero address");
-            
-            (successes[i], returnDatas[i]) = targets[i].call{value: values[i]}(datas[i]);
-            emit TransactionExecuted(targets[i], values[i], datas[i], successes[i]);
-        }
-        
-        return (successes, returnDatas);
-    }
-
-    /**
-     * @dev Get the balance of this wallet
-     */
     function getBalance() external view returns (uint256) {
         return address(this).balance;
     }
 
-    /**
-     * @dev Allow the wallet to receive Ether
-     */
     receive() external payable {
         emit EtherReceived(msg.sender, msg.value);
     }
@@ -110,9 +95,6 @@ contract UserWallet is Initializable, ReentrancyGuardUpgradeable, OwnableUpgrade
         emit EtherReceived(msg.sender, msg.value);
     }
 
-    /**
-     * @dev Emergency withdraw function (only owner)
-     */
     function emergencyWithdraw(address payable to, uint256 amount) external onlyOwner {
         require(to != address(0), "UserWallet: Cannot withdraw to zero address");
         
